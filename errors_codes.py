@@ -1,0 +1,9 @@
+missing_field = 1
+empty_field = 2
+wrong_field_type = 3
+field_too_short = 4
+field_too_long = 5
+wrong_email = 6
+used_email = 7
+wrong_verification = 8
+wrong_creditionals = 9
