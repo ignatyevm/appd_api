@@ -12,12 +12,13 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    role = Column(Integer, nullable=False, default=0)
+    role = Column(Integer, nullable=False)
 
-    def __init__(self, name, email, password):
+    def __init__(self, name, email, password, role):
         self.name = name
         self.email = email
         self.password = password
+        self.role = role
 
 
 class News(Base):

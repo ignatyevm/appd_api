@@ -6,4 +6,5 @@ field_too_long = 5
 wrong_email = 6
 used_email = 7
 wrong_verification = 8
-wrong_creditionals = 9
+wrong_credentials = 9
+wrong_role = 10

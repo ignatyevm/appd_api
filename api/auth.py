@@ -1,4 +1,5 @@
 import random
+import jwt
 
 from flask import request, Blueprint
 
@@ -10,15 +11,12 @@ from database import db_session, redis_session
 
 auth = Blueprint('auth', __name__)
 
-
-def generate_access_token():
-    import secrets
-    return secrets.token_hex(64)
+secret_key = b'aBsa921ra83naT1904fs'
 
 
 def hash_password(password):
     import hashlib
-    salt = 'ew832ejeWdSI21E23esdf231eq'
+    salt = 'ew832ejeWdSI21E23Efs231eq'
     return hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
 
 
@@ -29,25 +27,35 @@ def register():
         FieldValidator('name').required().string().max_len(255),
         FieldValidator('email').required().string().max_len(255).email(),
         FieldValidator('password').required().string().min_len(6).max_len(255),
+        FieldValidator('role').required().integer().values('0', '1')
     ]
     values, errors = validate(params, validators)
     if len(errors) > 0:
         return APIError(errors)
-    name, email, password = values
+    name, email, password, role = values
     user = User.query.filter_by(email=email).first()
     if user is not None:
         return APIError([{
             'error_code': errors_codes.used_email
         }])
 
-    code = random.randint(111111, 999999)
+    # code = random.randint(111111, 999999)
+    #
+    # print('code: ', code)
 
-    print('code: ', code)
+    # redis_session.hmset(email, {'name': name, 'password': password, 'role': role, 'code': code})
+    # redis_session.expire(email, 10 * 60)
 
-    redis_session.hmset(email, {'name': name, 'password': password, 'code': code})
-    redis_session.expire(email, 10 * 60)
+    db_session.add(User(name, email, hash_password(password), role))
+    db_session.commit()
 
-    return APIResponse()
+    access_token = jwt.encode({'user': {
+        'name': name,
+        'email': email
+    }}, secret_key)
+    redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
+
+    return APIResponse({'access_token': access_token})
 
 
 @auth.route('/auth.verify_email', methods=['POST'])
@@ -76,7 +84,10 @@ def verify_email():
     db_session.add(User(name, email, hash_password(password)))
     db_session.commit()
 
-    access_token = generate_access_token()
+    access_token = jwt.encode({'user': {
+        'name': name,
+        'email': email
+    }}, secret_key)
     redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
 
     return APIResponse({'access_token': access_token})
@@ -100,13 +111,16 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if user is None or password != user.password:
-        return APIError({'error_code': errors_codes.wrong_creditionals})
+        return APIError({'error_code': errors_codes.wrong_credentials})
 
     access_token = None
     if redis_session.exists(email):
         access_token = redis_session.get(email)
     else:
-        access_token = generate_access_token()
+        access_token = jwt.encode({'user': {
+            'name': user.name,
+            'email': email
+        }}, secret_key)
         redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
 
     return APIResponse({'access_token': access_token})

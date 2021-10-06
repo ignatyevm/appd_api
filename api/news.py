@@ -37,3 +37,4 @@ def create_news():
     if len(errors) > 0:
         return APIError(errors)
     title, description, access_token = values
+

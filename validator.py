@@ -102,6 +102,9 @@ class FieldValidator:
             else:
                 return WrongFieldError(errors_codes.wrong_field_type, self.__field_name)
 
+        if self.__values is not None and field_value not in self.__values:
+            return WrongFieldError(errors_codes.wrong_field_type, self.__field_name)
+
         return None
 
 
