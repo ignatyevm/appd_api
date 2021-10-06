@@ -8,3 +8,4 @@ used_email = 7
 wrong_verification = 8
 wrong_credentials = 9
 wrong_role = 10
+wrong_token = 11

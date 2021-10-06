@@ -1,9 +1,12 @@
 from flask import request, Blueprint
 
+import errors_codes
 from api_response import APIError, APIResponse
 from models import News
 from validator import FieldValidator, ValidationError, validate
 from database import db_session, redis_session
+import jwt
+import api.common as common
 
 news = Blueprint('news', __name__)
 
@@ -37,4 +40,12 @@ def create_news():
     if len(errors) > 0:
         return APIError(errors)
     title, description, access_token = values
-
+    try:
+        user_id, name, role = common.decode_jwt(access_token)
+        db_session.add(News(title, description, user_id))
+        db_session.commit()
+        return APIResponse()
+    except jwt.DecodeError:
+        return APIError([{
+            'error_code': errors_codes.wrong_token
+        }])

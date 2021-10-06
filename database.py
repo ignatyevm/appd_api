@@ -4,7 +4,9 @@ from sqlalchemy.ext.declarative import declarative_base
 
 import redis
 
-engine = create_engine('mysql://admin:admin12345@localhost:3306/appd', convert_unicode=True)
+import config
+
+engine = create_engine(config.db_url, convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=engine))

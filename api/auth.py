@@ -8,16 +8,15 @@ from models import User
 from validator import FieldValidator, ValidationError, validate
 import errors_codes
 from database import db_session, redis_session
+import api.common as common
 
 auth = Blueprint('auth', __name__)
-
-secret_key = b'aBsa921ra83naT1904fs'
 
 
 def hash_password(password):
     import hashlib
-    salt = 'ew832ejeWdSI21E23Efs231eq'
-    return hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
+    import config
+    return hashlib.sha256((password + config.hash_salt).encode('utf-8')).hexdigest()
 
 
 @auth.route('/auth.register', methods=['POST'])
@@ -46,51 +45,50 @@ def register():
     # redis_session.hmset(email, {'name': name, 'password': password, 'role': role, 'code': code})
     # redis_session.expire(email, 10 * 60)
 
-    db_session.add(User(name, email, hash_password(password), role))
+    user = User(name, email, hash_password(password), role)
+    db_session.add(user)
+    db_session.flush()
     db_session.commit()
 
-    access_token = jwt.encode({'user': {
-        'name': name,
-        'email': email
-    }}, secret_key)
-    redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
+    access_token = common.encode_jwt(user)
+    redis_session.setex(user.id, 60 * 60 * 24 * 30, access_token)
 
     return APIResponse({'access_token': access_token})
 
 
-@auth.route('/auth.verify_email', methods=['POST'])
-def verify_email():
-    params = request.form
-    validators = [
-        FieldValidator('email').required().string().max_len(255),
-        FieldValidator('code').required().string()
-    ]
-    values, errors = validate(params, validators)
-    if len(errors) > 0:
-        return APIError(errors)
-
-    email, code = values
-
-    if not redis_session.exists(email):
-        return APIError({'error_code': errors_codes.used_email})
-
-    name, password, actual_code = redis_session.hgetall(email).values()
-
-    if code != actual_code:
-        return APIError({'error_code': errors_codes.wrong_verification})
-
-    redis_session.delete(email)
-
-    db_session.add(User(name, email, hash_password(password)))
-    db_session.commit()
-
-    access_token = jwt.encode({'user': {
-        'name': name,
-        'email': email
-    }}, secret_key)
-    redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
-
-    return APIResponse({'access_token': access_token})
+# @auth.route('/auth.verify_email', methods=['POST'])
+# def verify_email():
+#     params = request.form
+#     validators = [
+#         FieldValidator('email').required().string().max_len(255),
+#         FieldValidator('code').required().string()
+#     ]
+#     values, errors = validate(params, validators)
+#     if len(errors) > 0:
+#         return APIError(errors)
+#
+#     email, code = values
+#
+#     if not redis_session.exists(email):
+#         return APIError({'error_code': errors_codes.used_email})
+#
+#     name, password, actual_code = redis_session.hgetall(email).values()
+#
+#     if code != actual_code:
+#         return APIError({'error_code': errors_codes.wrong_verification})
+#
+#     redis_session.delete(email)
+#
+#     db_session.add(User(name, email, hash_password(password)))
+#     db_session.commit()
+#
+#     access_token = jwt.encode({'user': {
+#         'name': name,
+#         'email': email
+#     }}, secret_key)
+#     redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
+#
+#     return APIResponse({'access_token': access_token})
 
 
 @auth.route('/auth.login', methods=['POST'])
@@ -114,13 +112,10 @@ def login():
         return APIError({'error_code': errors_codes.wrong_credentials})
 
     access_token = None
-    if redis_session.exists(email):
-        access_token = redis_session.get(email)
+    if redis_session.exists(user.id):
+        access_token = redis_session.get(user.id)
     else:
-        access_token = jwt.encode({'user': {
-            'name': user.name,
-            'email': email
-        }}, secret_key)
-        redis_session.setex(email, 60 * 60 * 24 * 30, access_token)
+        access_token = common.encode_jwt(user)
+        redis_session.setex(user.id, 60 * 60 * 24 * 30, access_token)
 
     return APIResponse({'access_token': access_token})
