@@ -31,7 +31,7 @@ class FieldValidator:
 
     __field_name = None
     __min_len = 1
-    __max_len = 255
+    __max_len = -1
     __required = False
     __email = False
     __values = None
@@ -88,7 +88,7 @@ class FieldValidator:
         if len(field_value) < self.__min_len:
             return WrongFieldError(errors_codes.field_too_short, self.__field_name)
 
-        if len(field_value) > self.__max_len:
+        if self.__max_len != -1 and len(field_value) > self.__max_len:
             return WrongFieldError(errors_codes.field_too_long, self.__field_name)
 
         if self.__email and not re.match("[a-z0-9\-\.]+@[a-z0-9\-\.]+\.[a-z]+", field_value, re.IGNORECASE):
