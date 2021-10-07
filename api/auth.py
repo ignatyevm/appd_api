@@ -94,7 +94,6 @@ def register():
 
 @auth.route('/auth.login', methods=['POST'])
 def login():
-    #  params = request.form
     params = request.json
     validators = [
         FieldValidator('email').required().string().max_len(255),
@@ -120,4 +119,4 @@ def login():
         access_token = common.encode_jwt(user)
         redis_session.setex(user.id, 60 * 60 * 24 * 30, access_token)
 
-    return APIResponse({'access_token': access_token})
+    return APIResponse({'access_token': access_token, 'user': user.toMap()})

@@ -20,6 +20,14 @@ class User(Base):
         self.password = password
         self.role = role
 
+    def toMap(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'role': self.role
+        }
+
 
 class News(Base):
     __tablename__ = 'News'
