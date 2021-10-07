@@ -1,3 +1,4 @@
+import json
 import random
 import jwt
 
@@ -93,7 +94,8 @@ def register():
 
 @auth.route('/auth.login', methods=['POST'])
 def login():
-    params = request.form
+    #  params = request.form
+    params = request.json
     validators = [
         FieldValidator('email').required().string().max_len(255),
         FieldValidator('password').required().string().min_len(6).max_len(255),
